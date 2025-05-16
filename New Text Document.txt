@@ -1,0 +1,294 @@
+# AWS ALB Service Module
+
+This module creates a complete AWS Application Load Balancer setup with all necessary components including security groups, listeners, target groups, certificates, listener rules, redirections, and integrations with Route53 and WAF.
+
+## Module Structure
+
+```
+aws-alb-module/
+│
+├── main.tf              # Main ALB configuration
+├── variables.tf         # Input variables
+├── outputs.tf           # Output values
+├── security_groups.tf   # Security group configuration
+├── target_groups.tf     # Target groups configuration
+├── listeners.tf         # Listeners and listener rules configuration
+├── certificates.tf      # ACM certificate configuration
+├── route53.tf           # Route53 DNS configuration
+├── waf.tf               # WAF association configuration
+└── README.md            # Module documentation
+```
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.0.0 |
+| aws | >= 4.0.0 |
+
+## Features
+
+- **Load Balancer Configuration**
+  - Support for both internal and internet-facing ALBs
+  - Deletion protection toggle
+  - Access logs configuration
+  - Idle timeout customization
+
+- **Security Groups**
+  - Configurable ingress rules using `for_each`
+  - Default egress rules
+  - Custom security group IDs support
+
+- **Target Groups**
+  - Dynamic creation with `for_each`
+  - Support for multiple target types (instance, IP, Lambda)
+  - Configurable health checks
+  - Stickiness settings
+  - Deregistration delay
+
+- **Target Group Attachments**
+  - Support for attaching EC2 instances, IPs, or Lambda functions
+  - Multiple targets per target group
+  - Optional port specification
+
+- **Certificate Management**
+  - Option to create new ACM certificates
+  - Support for existing certificates
+  - DNS validation via Route53
+  - Subject Alternative Names support
+
+- **Listeners**
+  - HTTP listener with redirect to HTTPS
+  - HTTPS listener with SSL/TLS policy
+  - Custom listener ports
+
+- **Listener Rules**
+  - Path-based routing
+  - Host-based routing
+  - HTTP header-based routing
+  - Query parameter-based routing
+  - Weighted routing
+  - Forwarding actions
+  - Redirect actions
+  - Fixed response actions
+
+- **Route53 Integration**
+  - A-record alias to ALB
+  - Support for custom domain names
+  - Support for multiple Route53 zones
+
+- **WAF Integration**
+  - Optional WAF Web ACL association
+  - Support for regional and global WAF ACLs
+
+## Usage
+
+This module can be used with minimal configuration while offering extensive customization options:
+
+```hcl
+module "alb" {
+  source = "./aws-alb-module"
+
+  name                     = "my-application"
+  vpc_id                   = "vpc-12345678"
+  subnets                  = ["subnet-12345678", "subnet-23456789"]
+  create_security_group    = true
+  enable_deletion_protection = false
+  
+  # Security Group Configuration
+  security_group_rules = {
+    ingress_http = {
+      from_port   = 80
+      to_port     = 80
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      description = "HTTP access"
+    }
+    ingress_https = {
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      description = "HTTPS access"
+    }
+  }
+  
+  # Target Groups
+  target_groups = {
+    app = {
+      name             = "app"
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
+      health_check = {
+        path                = "/health"
+        port                = "traffic-port"
+        healthy_threshold   = 3
+        unhealthy_threshold = 3
+        timeout             = 5
+        interval            = 30
+        matcher             = "200-299"
+      }
+      stickiness = {
+        enabled         = true
+        cookie_duration = 86400
+        type            = "lb_cookie"
+      }
+    }
+    api = {
+      name             = "api"
+      backend_protocol = "HTTP"
+      backend_port     = 8080
+      target_type      = "instance"
+      health_check = {
+        path                = "/api/health"
+        port                = "traffic-port"
+        healthy_threshold   = 3
+        unhealthy_threshold = 3
+      }
+    }
+  }
+  
+  # Target Group Attachments
+  target_group_attachments = {
+    app-instance1 = {
+      target_group_key = "app"
+      target_id        = "i-0123456789abcdef0"
+      port             = 80
+    }
+    app-instance2 = {
+      target_group_key = "app"
+      target_id        = "i-0123456789abcdef1"
+      port             = 80
+    }
+    api-instance1 = {
+      target_group_key = "api"
+      target_id        = "i-0123456789abcdef2"
+      port             = 8080
+    }
+  }
+  
+  # SSL Certificate
+  create_certificate = true
+  domain_name       = "example.com"
+  zone_id           = "Z2FDTNDATAQYW2"
+  subject_alternative_names = ["*.example.com"]
+  
+  # Listener Rules
+  https_listener_rules = {
+    api = {
+      priority     = 100
+      actions = [{
+        type               = "forward"
+        target_group_index = "api"
+      }]
+      conditions = [{
+        path_patterns = ["/api/*"]
+      }]
+    }
+    admin = {
+      priority     = 200
+      actions = [{
+        type               = "forward"
+        target_group_index = "app"
+      }]
+      conditions = [{
+        host_headers = ["admin.example.com"]
+      }]
+    }
+    legacy_redirect = {
+      priority     = 300
+      actions = [{
+        type        = "redirect"
+        status_code = "HTTP_301"
+        host        = "example.com"
+        path        = "/new-path/#{path}"
+        query       = "#{query}"
+      }]
+      conditions = [{
+        path_patterns = ["/legacy/*"]
+      }]
+    }
+  }
+  
+  # WAF Association
+  waf_web_acl_arn = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/my-web-acl/abcdef-1234-5678-90ab-cdef"
+  
+  # Additional Route53 Records
+  route53_records = {
+    api = {
+      zone_id = "Z2FDTNDATAQYW2"
+      name    = "api.example.com"
+      type    = "A"
+    }
+    admin = {
+      zone_id = "Z2FDTNDATAQYW2"
+      name    = "admin.example.com"
+      type    = "A"
+    }
+  }
+  
+  tags = {
+    Environment = "production"
+    Project     = "MyProject"
+  }
+}
+```
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| name | Name prefix for all resources | `string` | n/a | yes |
+| vpc_id | ID of the VPC where resources will be created | `string` | n/a | yes |
+| subnets | List of subnet IDs for the ALB | `list(string)` | n/a | yes |
+| internal | Whether the ALB is internal | `bool` | `false` | no |
+| create_security_group | Whether to create a security group for the ALB | `bool` | `true` | no |
+| security_group_ids | List of existing security group IDs to attach to the ALB | `list(string)` | `[]` | no |
+| security_group_rules | Map of security group rules to create | `map(object)` | `{}` | no |
+| enable_deletion_protection | Whether deletion protection is enabled | `bool` | `true` | no |
+| enable_http2 | Whether HTTP/2 is enabled | `bool` | `true` | no |
+| idle_timeout | The idle timeout in seconds | `number` | `60` | no |
+| access_logs | Access logs configuration | `object` | `null` | no |
+| target_groups | Map of target group configurations | `map(object)` | `{}` | no |
+| target_group_attachments | Map of target group attachments | `map(object)` | `{}` | no |
+| create_certificate | Whether to create an ACM certificate | `bool` | `false` | no |
+| certificate_arn | ARN of an existing ACM certificate | `string` | `null` | no |
+| domain_name | Domain name for the ALB and ACM certificate | `string` | `null` | no |
+| subject_alternative_names | Subject alternative names for the ACM certificate | `list(string)` | `[]` | no |
+| zone_id | Route53 zone ID for DNS records | `string` | `null` | no |
+| ssl_policy | SSL policy for HTTPS listeners | `string` | `"ELBSecurityPolicy-TLS13-1-2-2021-06"` | no |
+| http_tcp_listeners | List of HTTP and TCP listener configurations | `list(object)` | `[]` | no |
+| https_listeners | List of HTTPS listener configurations | `list(object)` | `[]` | no |
+| https_listener_rules | Map of HTTPS listener rule configurations | `map(object)` | `{}` | no |
+| waf_web_acl_arn | ARN of WAF Web ACL to associate with the ALB | `string` | `null` | no |
+| route53_records | Map of Route53 record configurations | `map(object)` | `{}` | no |
+| tags | Map of tags to apply to all resources | `map(string)` | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| lb_id | ID of the ALB |
+| lb_arn | ARN of the ALB |
+| lb_dns_name | DNS name of the ALB |
+| lb_zone_id | Zone ID of the ALB |
+| target_group_arns | Map of target group ARNs |
+| target_group_names | Map of target group names |
+| https_listener_arns | Map of HTTPS listener ARNs |
+| http_listener_arns | Map of HTTP listener ARNs |
+| security_group_id | ID of the ALB security group |
+| security_group_arn | ARN of the ALB security group |
+| certificate_arn | ARN of the ACM certificate |
+| route53_record_names | Map of Route53 record names |
+| route53_record_fqdns | Map of Route53 record FQDNs |
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This module is licensed under the MIT License.
+
+

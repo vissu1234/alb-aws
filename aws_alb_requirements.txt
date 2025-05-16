@@ -1,0 +1,292 @@
+# AWS Application Load Balancer (ALB) Service Requirements Document
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Service Overview](#service-overview)
+3. [Architecture Components](#architecture-components)
+4. [IAM Requirements](#iam-requirements)
+   - [Policies](#policies)
+   - [Roles](#roles)
+   - [Users](#users)
+5. [Network Requirements](#network-requirements)
+6. [Security Requirements](#security-requirements)
+7. [Monitoring and Logging](#monitoring-and-logging)
+8. [Deployment Requirements](#deployment-requirements)
+9. [Operational Requirements](#operational-requirements)
+
+## Introduction
+
+This document outlines the requirements for implementing AWS Application Load Balancer (ALB) services within our infrastructure. It covers all necessary components, IAM configurations, networking prerequisites, and operational considerations.
+
+## Service Overview
+
+AWS Application Load Balancer (ALB) is a Layer 7 load balancer that directs traffic to targets (EC2 instances, containers, IP addresses, Lambda functions) based on the content of the request. ALBs are ideal for advanced routing, containerized applications, and microservices architectures.
+
+**Key Features**:
+- Content-based routing
+- Support for HTTP/HTTPS protocols
+- Path-based routing
+- Host-based routing
+- Support for WebSockets
+- Integration with AWS services like ECS, EKS, Lambda, and Auto Scaling
+
+## Architecture Components
+
+The ALB architecture requires the following components:
+
+1. **Load Balancer**:
+   - Must be deployed in at least two Availability Zones
+   - Can be internet-facing or internal
+   - Requires proper security group configuration
+
+2. **Target Groups**:
+   - Define where traffic is routed
+   - Support health checks
+   - Can contain EC2 instances, IP addresses, Lambda functions, or containers
+
+3. **Listeners**:
+   - Define the port and protocol for incoming connections
+   - Configured with rules to route traffic to target groups
+
+4. **Rules**:
+   - Determine how requests are routed to targets
+   - Can be based on path patterns, host headers, HTTP methods, or query parameters
+
+## IAM Requirements
+
+### Policies
+
+#### 1. ALB Management Policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:CreateLoadBalancer",
+                "elasticloadbalancing:CreateListener",
+                "elasticloadbalancing:CreateRule",
+                "elasticloadbalancing:CreateTargetGroup",
+                "elasticloadbalancing:DeleteLoadBalancer",
+                "elasticloadbalancing:DeleteListener",
+                "elasticloadbalancing:DeleteRule",
+                "elasticloadbalancing:DeleteTargetGroup",
+                "elasticloadbalancing:ModifyLoadBalancerAttributes",
+                "elasticloadbalancing:ModifyTargetGroup",
+                "elasticloadbalancing:ModifyTargetGroupAttributes",
+                "elasticloadbalancing:RegisterTargets",
+                "elasticloadbalancing:DeregisterTargets",
+                "elasticloadbalancing:SetSecurityGroups",
+                "elasticloadbalancing:SetSubnets"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+#### 2. ALB Read-Only Policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:Describe*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+#### 3. ALB Logging Policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject"
+            ],
+            "Resource": "arn:aws:s3:::alb-logs-bucket/AWSLogs/*"
+        }
+    ]
+}
+```
+
+#### 4. Certificate Management Policy (for HTTPS)
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "acm:ListCertificates",
+                "acm:DescribeCertificate",
+                "acm:GetCertificate"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+### Roles
+
+#### 1. ALB Service Role
+- **Purpose**: Allows ALB to access other AWS services on your behalf
+- **Trusted Entity**: elasticloadbalancing.amazonaws.com
+- **Attached Policies**:
+  - ALB Management Policy
+  - ALB Logging Policy (if access logging is enabled)
+
+#### 2. ALB Automation Role
+- **Purpose**: Used by automation tools/CI/CD pipelines to manage ALB resources
+- **Trusted Entity**: Depends on the service (e.g., AWS Lambda, AWS CodeBuild)
+- **Attached Policies**:
+  - ALB Management Policy
+  - Certificate Management Policy (if using HTTPS)
+
+#### 3. ALB Monitoring Role
+- **Purpose**: Used for monitoring ALB metrics and logs
+- **Trusted Entity**: Depends on the monitoring service
+- **Attached Policies**:
+  - ALB Read-Only Policy
+  - CloudWatch Read-Only Access
+
+### Users
+
+#### 1. ALB Administrator
+- **Purpose**: Human user responsible for ALB administration
+- **Assigned Policies**:
+  - ALB Management Policy
+  - Certificate Management Policy
+  - IAM Limited Access (for role management)
+
+#### 2. ALB Operator
+- **Purpose**: Human user responsible for day-to-day ALB operations
+- **Assigned Policies**:
+  - ALB Read-Only Policy
+  - Limited ALB Management (specific actions only)
+
+#### 3. ALB Auditor
+- **Purpose**: User responsible for compliance and security audits
+- **Assigned Policies**:
+  - ALB Read-Only Policy
+  - CloudTrail Read-Only Access
+
+## Network Requirements
+
+1. **VPC Configuration**:
+   - At least two public subnets in different Availability Zones for internet-facing ALBs
+   - At least two private subnets in different Availability Zones for internal ALBs
+   - Each subnet must have a minimum /27 CIDR block (at least 32 IP addresses)
+
+2. **Security Groups**:
+   - Inbound rules to allow traffic on listener ports (typically 80/443)
+   - Outbound rules to allow traffic to target instances on target group ports
+   - Consider source IP restrictions for additional security
+
+3. **Route Tables**:
+   - Public subnets need routes to the Internet Gateway
+   - Private subnets need routes to NAT Gateway if targets need internet access
+
+4. **Network ACLs**:
+   - Allow inbound/outbound traffic on ALB listener ports
+   - Allow ephemeral ports (1024-65535) for return traffic
+
+## Security Requirements
+
+1. **TLS/SSL Encryption**:
+   - HTTPS listeners should use certificates from AWS Certificate Manager (ACM)
+   - Minimum TLS version should be TLS 1.2
+   - Modern cipher suites should be enforced
+
+2. **Security Policies**:
+   - Use the latest security policies provided by AWS
+   - Current recommendation: ELBSecurityPolicy-2016-08 or newer
+
+3. **Access Control**:
+   - Implement strict IAM policies using least privilege principle
+   - Consider IP-based restrictions for ALB administration
+
+4. **Security Groups**:
+   - Restrict inbound traffic to necessary sources only
+   - For internal ALBs, restrict to specific VPC CIDR blocks or security groups
+
+5. **WAF Integration (Optional)**:
+   - Consider integrating AWS WAF for additional protection against common web exploits
+
+## Monitoring and Logging
+
+1. **Access Logs**:
+   - Enable access logging to an S3 bucket
+   - Establish log retention policies
+
+2. **CloudWatch Metrics**:
+   - Monitor key metrics:
+     - HTTPCode_ELB_4XX_Count
+     - HTTPCode_ELB_5XX_Count
+     - TargetResponseTime
+     - RequestCount
+     - HealthyHostCount
+     - UnHealthyHostCount
+
+3. **Alarms**:
+   - Set up CloudWatch alarms for critical metrics
+   - Configure alarm thresholds based on expected traffic patterns
+
+4. **CloudTrail Integration**:
+   - Enable CloudTrail for API activity monitoring
+   - Focus on elasticloadbalancing API calls
+
+## Deployment Requirements
+
+1. **Automated Deployment**:
+   - Use Infrastructure as Code (IaC) tools:
+     - AWS CloudFormation
+     - Terraform
+     - AWS CDK
+
+2. **Tagging Strategy**:
+   - Implement consistent tagging for ALB resources
+   - Recommended tags:
+     - Environment (e.g., Production, Staging)
+     - Owner
+     - Cost Center
+     - Application
+
+3. **High Availability**:
+   - Deploy in at least two Availability Zones
+   - Use Auto Scaling for target instances
+
+4. **Blue/Green Deployment Support**:
+   - Configure for zero-downtime deployments
+   - Set up test listeners for validation before production traffic
+
+## Operational Requirements
+
+1. **Health Checks**:
+   - Configure appropriate health check paths
+   - Set optimal health check intervals and thresholds
+
+2. **Scaling Procedures**:
+   - Document procedures for scaling the ALB
+   - Set up Auto Scaling for targets
+
+3. **Backup and Recovery**:
+   - Document ALB configuration backup procedures
+   - Establish recovery time objectives (RTO)
+
+4. **Incident Response**:
+   - Define escalation procedures for ALB-related incidents
+   - Document common troubleshooting steps
+
+5. **Maintenance Windows**:
+   - Schedule regular maintenance windows
+   - Plan for AWS-initiated maintenance
