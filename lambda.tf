@@ -136,3 +136,109 @@ resource "aws_lb_listener_rule" "lambda_rule" {
     }
   }
 }
+
+
+# variables.tf
+
+variable "prefix" {
+  type        = string
+  description = "Prefix for resource names"
+}
+
+variable "vpc_id" {
+  type        = string
+  description = "VPC ID"
+}
+
+variable "subnet_ids" {
+  type        = list(string)
+  description = "List of subnet IDs for the ALB"
+}
+
+variable "alb_ingress_rules" {
+  description = "Ingress rules for ALB security group"
+  type = map(object({
+    port        = number
+    protocol    = string
+    cidr_blocks = list(string)
+    description = string
+  }))
+}
+
+variable "common_tags" {
+  type        = map(string)
+  description = "Common tags to apply to all resources"
+}
+
+variable "internal" {
+  type        = bool
+  description = "Whether the ALB is internal"
+}
+
+variable "enable_deletion_protection" {
+  type        = bool
+  description = "Enable deletion protection for ALB"
+}
+
+variable "idle_timeout" {
+  type        = number
+  description = "Idle timeout in seconds"
+}
+
+variable "logs_bucket" {
+  type        = string
+  description = "S3 bucket for ALB access logs"
+}
+
+variable "target_groups" {
+  description = "Map of target group configurations"
+  type = map(object({
+    target_type            = string
+    protocol               = string
+    port                   = optional(number)
+    health_check_path      = optional(string)
+    health_check_port      = optional(string)
+    health_check_protocol  = optional(string)
+    healthy_threshold      = optional(number)
+    unhealthy_threshold    = optional(number)
+    health_check_timeout   = optional(number)
+    health_check_interval  = optional(number)
+    health_check_matcher   = optional(string)
+    stickiness_enabled     = optional(bool)
+    stickiness_duration    = optional(number)
+    deregistration_delay   = optional(number)
+    lambda_function_arn    = optional(string)
+    path_pattern           = optional(string)
+  }))
+}
+
+variable "listener_arn" {
+  type        = string
+  description = "Listener ARN for the ALB"
+}
+
+
+# outputs.tf
+
+output "alb_dns_name" {
+  description = "The DNS name of the load balancer"
+  value       = aws_lb.this.dns_name
+}
+
+output "alb_arn" {
+  description = "The ARN of the load balancer"
+  value       = aws_lb.this.arn
+}
+
+output "alb_sg_id" {
+  description = "The ALB security group ID"
+  value       = aws_security_group.alb_sg.id
+}
+
+output "target_group_arns" {
+  description = "Map of target group ARNs"
+  value = {
+    for k, tg in aws_lb_target_group.this :
+    k => tg.arn
+  }
+}
