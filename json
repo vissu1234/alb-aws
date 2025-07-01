@@ -1,0 +1,19 @@
+exports.handler = async (event) => {
+    if (event.rawPath === "/healthcheck") {
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                status: "FAIL",
+                reason: "Simulated health check failure"
+            })
+        };
+    }
+
+    // Normal logic for other paths
+    return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "OK" })
+    };
+};
