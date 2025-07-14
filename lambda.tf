@@ -86,3 +86,22 @@ resource "aws_lb_listener_rule" "lambda_rule" {
 
   tags = var.common_tags
 }
+variable "prefix" {
+  description = "Prefix for resource names"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID (required by ALB even for Lambda target groups)"
+  type        = string
+}
+
+variable "lambda_zip_path" {
+  description = "Path to zipped Lambda source code"
+  type        = string
+}
+
+variable "common_tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+}
