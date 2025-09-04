@@ -12,3 +12,11 @@ alb_ingress_rules:
     cidr_blocks:
       - "0.0.0.0/0"
     description: "Allow HTTPS"
+# Egress rules
+alb_egress_rules:
+  # Allow all outbound (often allowed, but your Sentinel may require restricting)
+  - from_port: 0
+    to_port: 0
+    protocol: "-1"                 # all protocols
+    cidr_blocks: ["10.0.0.0/8"]    # prefer VPC/corporate ranges, not 0.0.0.0/0
+    description: "Allow all egress within corp"
