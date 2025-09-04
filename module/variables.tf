@@ -82,17 +82,14 @@ variable "alb_ingress_rules" {
   }))
 }
 
-  # EGRESS
-  dynamic "egress" {
-    for_each = var.alb_egress_rules
-    content {
-      from_port   = egress.value.from_port
-      to_port     = egress.value.to_port
-      protocol    = egress.value.protocol
-      cidr_blocks = egress.value.cidr_blocks
-      description = egress.value.description
-    }
-  }
+variable "alb_egress_rules" {
+  type = list(object({
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr_blocks = list(string)
+    description = optional(string)
+  }))
 variable "target_groups" {
   description = "Map of target groups to create"
   type = map(object({
