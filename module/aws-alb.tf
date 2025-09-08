@@ -1,3 +1,19 @@
+locals {
+  env = substr(var.project_info.environment, 0, 1)
+
+  output_data = {
+    for region, cfg in var.config_data : region => merge(
+      cfg,
+      {
+        region      = region                      # from YAML key
+        account_id  = var.project_info.project_id
+        env_abbrv   = local.env
+        environment = var.project_info.environment
+      }
+    )
+  }
+}
+
 provider "aws" {
   region = var.region
 }
