@@ -69,3 +69,9 @@ gcloud netapp volumes create my-volume \
   --tier=PREMIUM \
   --share-name=myshare
 
+| API                                   | Purpose                                                    |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `netapp.googleapis.com`               | Core NetApp Volumes API (main service endpoint).           |
+| `compute.googleapis.com`              | Required for Compute Engine network access.                |
+| `servicenetworking.googleapis.com`    | For private service access between GCP and NetApp systems. |
+| `cloudresourcemanager.googleapis.com` | For project and IAM resource access.                       |
