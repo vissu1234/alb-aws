@@ -75,3 +75,16 @@ gcloud netapp volumes create my-volume \
 | `compute.googleapis.com`              | Required for Compute Engine network access.                |
 | `servicenetworking.googleapis.com`    | For private service access between GCP and NetApp systems. |
 | `cloudresourcemanager.googleapis.com` | For project and IAM resource access.                       |
+
+
+
+
+The roles/netapp.admin role provides full administrative access to all NetApp resources within a Google Cloud project, including:
+
+Creating, updating, and deleting NetApp Volumes
+
+Managing snapshots, replication, and storage pools
+
+Viewing and managing volume configurations and connections
+
+Full access to NetApp API (netapp.googleapis.com)
