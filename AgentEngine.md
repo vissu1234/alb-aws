@@ -22,3 +22,5 @@ Service account permissions – Workbench / other clients must have access to ca
 Knowledge sources (optional) – GCS / BigQuery / Web if doing RAG
 
 Calling the agent – via Python SDK, REST API, or other clients
+
+So in short: Agent Engine is invisible to you — it’s always enabled automatically when you create an agent.
