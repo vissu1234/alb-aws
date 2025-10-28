@@ -100,3 +100,26 @@ output "agent_name" {
 output "search_engine_name" {
   value = google_discovery_engine_search_engine.search_engine.name
 }
+
+
+##################################################################################################################
+resource "google_project_service" "enable_vertex_ai" {
+  project = var.project_id
+  service = "aiplatform.googleapis.com"
+}
+
+resource "null_resource" "create_agent" {
+  depends_on = [google_project_service.enable_vertex_ai]
+
+  provisioner "local-exec" {
+    command = <<EOT
+    gcloud alpha vertex agents create \
+      --display-name="Support Assistant" \
+      --description="Provides help by retrieving product info and docs" \
+      --model="gemini-1.5-pro" \
+      --location=${var.region} \
+      --service-account=${google_service_account.agent_sa.email} \
+      --project=${var.project_id}
+    EOT
+  }
+}
