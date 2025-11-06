@@ -88,3 +88,42 @@ Managing snapshots, replication, and storage pools
 Viewing and managing volume configurations and connections
 
 Full access to NetApp API (netapp.googleapis.com)
+
+#################################################################
+
+Example end-to-end (very small working plan)
+
+gcloud services enable servicenetworking.googleapis.com compute.googleapis.com netapp.googleapis.com
+
+Terraform (apply) resources:
+
+google_compute_network.my_vpc (if not already present)
+
+google_compute_global_address.psa_range
+
+google_service_networking_connection.psa
+
+google_netapp_storage_pool.pool (with active_directory set)
+
+google_netapp_volume.vol1
+
+Validate from GCP Console → NetApp Volumes → Storage pools → Pool shows Network: <your VPC> and Active Directory: <your AD>. You should be able to mount NFS/SMB from VMs in the same VPC.
+
+
+#######################################################################################################
+
+resource "google_compute_network" "vpc" { ... }
+
+resource "google_compute_global_address" "psc_range" {
+  name          = "netapp-psc-range"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  purpose       = "VPC_PEERING"
+  network       = google_compute_network.vpc.id
+}
+
+resource "google_service_networking_connection" "psa" {
+  network                 = google_compute_network.vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.psc_range.name]
+}
