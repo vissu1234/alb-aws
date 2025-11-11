@@ -127,3 +127,17 @@ resource "google_service_networking_connection" "psa" {
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.psc_range.name]
 }
+
+
+Allocate a global internal IP range with purpose = "VPC_PEERING" and address_type = "INTERNAL" before any storage pool creation.
+
+Create a google_service_networking_connection to servicenetworking.googleapis.com (service producer) with the reserved IP range.
+
+Ensure your google_netapp_storage_pool resource has dependency on that peering (either implicitly via ordering or explicitly using depends_on).
+
+Make sure the network field of storage_pool references a VPC where PSA is set up.
+
+No need to reference the PSA resource directly inside the storage pool—once it's done, storage pool provisioning works.
+
+
+
