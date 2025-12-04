@@ -1,0 +1,103 @@
+config_data:
+
+  dev:
+    location: "us-central1"
+    common_labels:
+      env: "dev"
+      owner: "engineering"
+
+    storage_pool:
+      create_pool: true
+      name: "dev-storage-pool"
+      network_name: "default"
+      network_project_id: "gcp-project1"
+      service_level: "PREMIUM"
+      size: 2048
+      description: "Development storage pool"
+      labels:
+        team: "dev-team"
+      ldap_enabled: false
+      ad_id: null
+      kms_config: null
+      zone: "us-central1-a"
+      replica_zone: "us-central1-b"
+      allow_auto_tiering: true
+
+    storage_volumes:
+      finance-vol:
+        name: "finance-volume"
+        size: 1000
+        share_name: "finance"
+        protocols: ["NFS"]
+        labels:
+          data-type: "confidential"
+        smb_settings: []
+        unix_permissions: "755"
+        description: "Finance project storage"
+        snapshot_directory: true
+        security_style: "UNIX"
+        kerberos_enabled: false
+        restricted_actions: []
+        deletion_policy: "retain"
+
+        backup_policies: ["daily-backup"]
+        backup_vault: "vault-01"
+        scheduled_backup_enabled: true
+        multiple_endpoints: false
+        large_capacity: false
+
+        export_policy_rules:
+          rule1:
+            allowed_clients: "10.0.0.0/24"
+            has_root_access: "true"
+            access_type: "READ_WRITE"
+            nfsv3: true
+            nfsv4: true
+            kerberos5_read_only: false
+            kerberos5_read_write: false
+            kerberos5i_read_only: false
+            kerberos5i_read_write: false
+            kerberos5p_read_only: false
+            kerberos5p_read_write: false
+
+        snapshot_policy:
+          enabled: true
+          hourly_schedule:
+            snapshots_to_keep: 6
+            minute: 0
+          daily_schedule:
+            snapshots_to_keep: 7
+            minute: 30
+            hour: 2
+          weekly_schedule:
+            snapshots_to_keep: 4
+            minute: 15
+            hour: 3
+            day: "SUNDAY"
+          monthly_schedule:
+            snapshots_to_keep: 12
+            minute: 45
+            hour: 1
+            days_of_month: "1,15"
+
+        restore_parameters:
+          source_snapshot: null
+          source_backup: null
+
+        tiering_policy:
+          cooling_threshold_days: 7
+          tier_action: "MOVE_TO_CLOUD"
+
+  prod:
+    location: "us-east1"
+    common_labels:
+      env: "prod"
+      compliance: "HIPAA"
+
+    storage_pool:
+      name: "prod-pool"
+      service_level: "EXTREME"
+      size: 8192
+      zone: "us-east1-c"
+
+    storage_volumes: {}
