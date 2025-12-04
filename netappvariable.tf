@@ -1,7 +1,9 @@
 variable "config_data" {
+  description = "Complete configuration for multiple environments, including location, labels, storage pool and volumes"
   type = map(object({
-    location       = string
-    common_labels  = optional(map(string), {})
+
+    location      = string
+    common_labels = optional(map(string), {})
 
     storage_pool = object({
       create_pool        = optional(bool, false)
@@ -20,7 +22,7 @@ variable "config_data" {
       allow_auto_tiering = optional(bool)
     })
 
-    storage_volumes = optional(map(object({
+    storage_volumes = optional(list(object({
 
       name               = string
       size               = number
@@ -96,6 +98,7 @@ variable "config_data" {
         tier_action            = string
       }))
 
-    })), {})
+    })), [])
+
   }))
 }
