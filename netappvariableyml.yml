@@ -2,6 +2,7 @@ config_data:
 
   dev:
     location: "us-central1"
+
     common_labels:
       env: "dev"
       owner: "engineering"
@@ -9,23 +10,12 @@ config_data:
     storage_pool:
       create_pool: true
       name: "dev-storage-pool"
-      network_name: "default"
-      network_project_id: "gcp-project1"
       service_level: "PREMIUM"
       size: 2048
-      description: "Development storage pool"
-      labels:
-        team: "dev-team"
-      ldap_enabled: false
-      ad_id: null
-      kms_config: null
       zone: "us-central1-a"
-      replica_zone: "us-central1-b"
-      allow_auto_tiering: true
 
     storage_volumes:
-      finance-vol:
-        name: "finance-volume"
+      - name: "finance-volume"
         size: 1000
         share_name: "finance"
         protocols: ["NFS"]
@@ -92,12 +82,15 @@ config_data:
     location: "us-east1"
     common_labels:
       env: "prod"
-      compliance: "HIPAA"
 
     storage_pool:
       name: "prod-pool"
       service_level: "EXTREME"
-      size: 8192
-      zone: "us-east1-c"
+      size: 4096
+      zone: "us-east1-b"
 
-    storage_volumes: {}
+    storage_volumes:
+      - name: "prod-volume"
+        size: 2000
+        share_name: "prod-share"
+        protocols: ["NFS"]
